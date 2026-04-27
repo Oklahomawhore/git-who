@@ -1,0 +1,69 @@
+#!/bin/bash
+# git-who - 一键甩锅 + 飞书自动@责任人
+# 用法：git-who 文件名 行号
+# 配置：使用环境变量 FEISHU_WEBHOOK_URL
+
+# WebHook 通过环境变量提供，便于打包成可复用 skill
+FEISHU_WEBHOOK_URL="${FEISHU_WEBHOOK_URL:-}"
+
+if [ $# -ne 2 ]; then
+    echo -e "\033[31m❌ 用法：git-who 文件名 行号\033[0m"
+    echo "示例：git-who index.js 88"
+    exit 1
+fi
+
+if [ -z "$FEISHU_WEBHOOK_URL" ]; then
+    echo -e "\033[31m❌ 请先设置 FEISHU_WEBHOOK_URL 环境变量\033[0m"
+    echo "示例：export FEISHU_WEBHOOK_URL='https://open.feishu.cn/open-apis/bot/v2/hook/xxxx'"
+    exit 1
+fi
+
+file="$1"
+line="$2"
+
+# 执行 blame 获取信息
+info=$(git blame -w -s -L "$line","$line" "$file" 2>/dev/null | head -n1)
+
+if [ -z "$info" ]; then
+    echo -e "\033[31m❌ 找不到文件或行号！\033[0m"
+    exit 1
+fi
+
+# 解析信息
+author=$(echo "$info" | awk '{print $2}')
+code=$(echo "$info" | cut -d')' -f2- | xargs)
+
+# 甩锅金句
+slogans=(
+    "这段代码和我没关系，别找我。"
+    "溯源成功，责任人已锁定。"
+    "祖传代码，历史问题，与我无瓜。"
+    "破案了，不是我写的。"
+    "还好有git blame，不然锅是我的。"
+    "我负责的部分很稳，问题在这行。"
+    "经典代码，果然出自大佬之手。"
+    "历史遗留杰作，我不敢动。"
+)
+slogan=${slogans[$((RANDOM % ${#slogans[@]}))]}
+
+# 终端彩色输出
+echo -e "\033[34m📄 文件：$file\033[0m"
+echo -e "\033[33m🚩 行号：$line\033[0m"
+echo -e "\033[32m👤 责任人：$author\033[0m"
+echo -e "\033[35m💻 代码：$code\033[0m"
+echo -e "\033[31m🔥 甩锅金句：$slogan\033[0m"
+echo -e "\033[36m🚀 正在发送飞书消息...\033[0m"
+
+# ====================== 飞书消息发送 ======================
+curl -s -X POST "$FEISHU_WEBHOOK_URL" \
+-H "Content-Type: application/json" \
+-d @- << EOF
+{
+    "msg_type": "text",
+    "content": {
+        "text": "【🔥 一键甩锅】\n文件：$file\n行号：$line\n问题代码：$code\n@$author $slogan"
+    }
+}
+EOF
+
+echo -e "\n\033[32m✅ 发送完成！已在飞书群@$author\033[0m"

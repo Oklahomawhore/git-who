@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "id": "git-who",
+  "name": "git-who",
+  "version": "1.0.0",
+  "type": "cli",
+  "description": "Trace a line with git blame and notify Feishu group with owner mention message.",
+  "entrypoint": "bin/git-who",
+  "arguments": [
+    {
+      "name": "file",
+      "type": "string",
+      "required": true,
+      "description": "Target file path in git repository"
+    },
+    {
+      "name": "line",
+      "type": "number",
+      "required": true,
+      "description": "Target line number"
+    }
+  ],
+  "environment": [
+    {
+      "name": "FEISHU_WEBHOOK_URL",
+      "required": true,
+      "description": "Feishu bot incoming webhook URL"
+    }
+  ],
+  "tags": ["git", "blame", "cli", "feishu"],
+  "license": "MIT"
+}
